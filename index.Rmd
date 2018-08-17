@@ -8,26 +8,35 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warnings=FALSE)
 ```
 
 
 ##1. Background
 
 
+Data used in this project come from accelerometers on the belt, forearm, arm, and dumbell.
 
-Based on exercise sensor data, we would like to determine if someone else performing an exercise correctly. In this case, the data that will be used is from 6 participants doing Unilateral Dumbbell Biceps Curls while wearing various sensors. Each repetition was categorized into one of the following classes:
+Six participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways : 
 
 A - exactly according to the specification
 B - throwing the elbows to the front
 C - lifting the dumbbell only halfway
 D - lowering the dumbbell only halfway
 E - throwing the hips to the front
-Data used in this project come from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
 
 
-Using the data of these 6 participants the aim of the project is to train a model to predict the manner in which 20 participants did the exercise. 
 
+Using the data of these 6 participants **the aim of this Machine Learning project is to train a model to predict the manner in which 20 new participants did the exercise**. 
+
+
+
+![](img/sensors.jpg)
+
+*From : Velloso, Eduardo, et al. "Qualitative activity recognition of weight lifting exercises." Proceedings of the 4th Augmented Human International Conference. ACM, 2013.*
+
+
+*NB : More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).*
 
 ## Data
 
@@ -64,29 +73,33 @@ library(funModeling)
 
 ##1. First look on data
 
+###1.1 Dimensions
 ```{r}
 dim(training)
 ```
 
-Training data contains 159 possible explanatory variables, and 196622 observations !
+Training data contains 159 possible explanatory variables, and 196622 observations ! It will be impossible (beacause of time computation) to use all the available data to train the model.So latter in the project we'are going to use a little part of these data.
 
-
+###1.2 Structure
 ```{r}
 str(training)
 ```
 
-Some variables seem to be factor by error and contains #DIV/0!". I choose to remove these factor variables.
+Some variables seem to be factor by error and contains #DIV/0!". I'm going to remove these factor variables.
+
 
 
 ##3. Explanatory variables selection
 
 
-###3.1 Remonving false factor variable
+###3.1 Remonving false factor variables
 
 ```{r}
+# data set of exmplanatory variables (response variable is removed)
 Descr_Var <-training %>%
 	select(-classe)
 
+# in this new data set, false factor variables are removed
 Descr_Var2 <- Descr_Var %>%
 	dplyr::select_if(~!is.factor(.x))
 
@@ -97,7 +110,7 @@ Descr_Var2 <- Descr_Var %>%
 ###3.2 Removing variables with more than 10% of NA values
 
 
-Using the df_status function of the funModeling package, we can see that some variables contain a high percentage of missing values. I'm going to remove those variables having more than 10% of NA values using code available in *Casas, Pablo. Data Science Live Book: An intuitive and practical approach to data analysis, data preparation and machine learning, suitable for all ages! (p. 13). Édition du Kindle*.   
+Using the df_status function of the funModeling package, we can see that some variables contain a high percentage of missing values. I'm going to remove all the explanatory variables having more than 10% of NA values using code available in *Casas, Pablo. Data Science Live Book: An intuitive and practical approach to data analysis, data preparation and machine learning, suitable for all ages! (p. 13). Édition du Kindle*.   
 
 ```{r}
 Descr_Var2_status <- df_status(Descr_Var2)
@@ -123,7 +136,7 @@ Descr_Var2 = select(Descr_Var2, -one_of( vars_to_remove))
 
 ###3.3 Removing variables having Zero and near zero-variance Predictors:
 
-To remove the explanatory variables having Zero or near zero-variance, I use the nzv function of caret package
+To remove the explanatory variables having Zero or near zero-variance, I use the "nzv"" function of "caret" package
 
 ```{r}
 nzv <- nearZeroVar(Descr_Var2, saveMetrics= TRUE)
@@ -143,7 +156,7 @@ Now there are 56 possible predictors variables.
 
 ####3.4.1 X variable
 
-X variable has no information, is row index
+X variable has no information, is row index, so I'm going to remove it.
 
 ```{r}
 Descr_Var2 <- Descr_Var2 %>%
@@ -153,6 +166,7 @@ Descr_Var2 <- Descr_Var2 %>%
 
 ####3.4.2 Date and Time variables
 
+Date and Time variables have no usable informations.So, I'm going to remove theù too.
 ```{r}
 
 Descr_Var2 <- Descr_Var2 %>%
@@ -162,6 +176,7 @@ Descr_Var2 <- Descr_Var2 %>%
 
 ####3.4.3 num_window variable
 
+As the same for the "num_window" variable.
 ```{r}
 Descr_Var2 <- Descr_Var2 %>%
 	select(-"num_window")
@@ -179,9 +194,6 @@ Descr_Var3 <- Descr_Var2[,-highlyCorDescr]
 
 ```
 
-```{r}
-ncol(Descr_Var3)
-```
 
 
 ###3.6 Removing Linear combination
@@ -194,6 +206,12 @@ comboInfo
 No linear combination, so no variable to remove
 
 
+
+```{r}
+ncol(Descr_Var3)
+```
+
+At the end of this step of variable selection, 34 are still usable to train a model to predict the manner in which new 20 participants did the exercice.
 
 ##4. Split training into training and valid sets
 
@@ -235,7 +253,7 @@ valid_data <- tmp_data[-indTrain,]
 
 ###5.1 Random Forest
 
-```{r}
+```{r, cache=TRUE}
 mod_rf <- train(classe~., data=train_data, method="rf", prox=TRUE)
 pred_rf <- predict(mod_rf, valid_data)
 CM_rf <- confusionMatrix(valid_data$classe, pred_rf)
@@ -244,7 +262,7 @@ CM_rf
 
 ###5.2 Boosting with tree
 
-```{r}
+```{r,cache=TRUE}
 mod_gbm <- train(classe~., data=train_data, method="gbm")
 pred_gbm <- predict(mod_gbm, valid_data)
 CM_gbm <- confusionMatrix(valid_data$classe, pred_gbm)
@@ -254,7 +272,7 @@ CM_gbm
 
 ##5.4 gbm + rf
 
-```{r}
+```{r,cache=TRUE}
 predDF <- data.frame(pred_rf, pred_gbm, classe=valid_data$classe)
 mod_comb <- train(classe~.,method="treebag", data=predDF)
 pred_comb <- predict(mod_comb, valid_data)
