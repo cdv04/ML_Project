@@ -2,7 +2,10 @@
 title: "Machine Learning Project"
 author: "Claire Della Vedova"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: html_document
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
 editor_options: 
   chunk_output_type: console
 ---
@@ -10,6 +13,8 @@ editor_options:
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 ```
+
+
 
 
 ##1. Background
@@ -38,7 +43,7 @@ Using the data of these 6 participants **the aim of this Machine Learning projec
 
 *NB : More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).*
 
-##1. Data
+##2. Data
 
 The training data for this project are available here:
 
@@ -60,7 +65,7 @@ testing <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-tes
 
 
 
-##2. Packages needed
+##3. Packages needed
 
 ```{r package}
 
@@ -71,33 +76,33 @@ library(AppliedPredictiveModeling)
 
 ```
 
-##1. First look on data
+##4. First look on data
 
-###1.1 Dimensions
+###4.1 Dimensions
 ```{r}
 dim(training)
 ```
 
 Training data contains 159 possible explanatory variables, and 19622 observations ! It will be impossible (beacause of time computation) to use all the available data to train the model.So latter in the project we'are going to use a little part of these data.
 
-###1.2 Structure
+###4.2 Structure
 ```{r}
 str(training)
 ```
 
 Some variables seem to be factor by error and contains #DIV/0!". I'm going to remove these factor variables.
 
-###1.3 Distribution of classe modalities
+###4.3 Distribution of classe modalities
 
 ```{r}
 freq(data=training, input=c("classe"))
 ```
 
 
-##3. Explanatory variables selection
+##5. Explanatory variables selection
 
 
-###3.1 Remonving false factor variables
+###5.1 Remonving false factor variables
 
 ```{r}
 # data set of exmplanatory variables (response variable is removed)
@@ -112,7 +117,7 @@ Descr_Var2 <- Descr_Var %>%
 
 
 
-###3.2 Removing variables with more than 10% of NA values
+###5.2 Removing variables with more than 10% of NA values
 
 
 Using the df_status function of the funModeling package, we can see that some variables contain a high percentage of missing values. I'm going to remove all the explanatory variables having more than 10% of NA values using code available in *Casas, Pablo. Data Science Live Book: An intuitive and practical approach to data analysis, data preparation and machine learning, suitable for all ages! (p. 13). Édition du Kindle*.   
@@ -139,7 +144,7 @@ Descr_Var2 = select(Descr_Var2, -one_of( vars_to_remove))
 
 
 
-###3.3 Removing variables having Zero and near zero-variance Predictors:
+###5.3 Removing variables having Zero and near zero-variance Predictors:
 
 To remove the explanatory variables having Zero or near zero-variance, I use the "nzv"" function of "caret" package
 
@@ -157,9 +162,9 @@ dim(Descr_Var2)
 
 Now there are 56 possible predictors variables.
 
-###3.4 Removing other variables
+###5.4 Removing other variables
 
-####3.4.1 X variable
+####5.4.1 X variable
 
 X variable has no information, is row index, so I'm going to remove it.
 
@@ -169,7 +174,7 @@ Descr_Var2 <- Descr_Var2 %>%
 ```
 
 
-####3.4.2 Date and Time variables
+####5.4.2 Date and Time variables
 
 Date and Time variables have no usable informations.So, I'm going to remove theù too.
 ```{r}
@@ -179,7 +184,7 @@ Descr_Var2 <- Descr_Var2 %>%
 
 ```
 
-####3.4.3 num_window variable
+####5.4.3 num_window variable
 
 
 As the same for the "num_window" variable.
@@ -189,7 +194,7 @@ Descr_Var2 <- Descr_Var2 %>%
 ```
 
 
-###3.5 Removing high correlated predictors (cutoff used= 0.75)
+###5.5 Removing high correlated predictors (cutoff used= 0.75)
 ```{r}
 
 
@@ -202,7 +207,7 @@ Descr_Var3 <- Descr_Var2[,-highlyCorDescr]
 
 
 
-###3.6 Removing Linear combination
+###5.6 Removing Linear combination
 
 ```{r}
 comboInfo <- findLinearCombos(Descr_Var3)
@@ -222,9 +227,9 @@ At the end of this step of variable selection, 34 are still usable to train a mo
 
 
 
-##4. Split training into training and valid sets
+##6. Split training into training and valid sets
 
-###4.1 Applying variable selection on training
+###6.1 Applying variable selection on training
 
 ```{r}
 selected_variables <- names(Descr_Var3)
@@ -243,7 +248,7 @@ training2 <- training %>%
 
 ```
 
-###4.2 Split training into train_dat and valid_data sets
+###6.2 Split training into train_dat and valid_data sets
 
 Since the training data set contains too much lines to train the model (because of calculus time), we need to select a little part of them. I choose to use 25% of the 19622 observations, i.e 4907 observations. And, also I limit the explanatory variable to those previously selected.
 
@@ -278,12 +283,12 @@ dim(valid_data)
 
 
 
-##5. Train Models
+##7. Train Models
 
 Since random forests are known to have good performance in classification machine learning 
 problems, I chose to use this kind of model.
 
-###5.1 Random Forest
+###7.1 Random Forest
 
 ```{r, cache=TRUE}
 mod_rf <- train(classe~., data=train_data, method="rf", prox=TRUE)
@@ -306,7 +311,7 @@ plot(CM_rf$table, color=c("#FF7F00", "#00008B", "#0000EE", "#4876FF", "#00BFFF")
 ```
 
 
-###5.2 Boosting with tree
+###7.2 Boosting with tree
 
 As a second kind a model, I chose to use a Generalized Boosted Model because it's also known as having good performance in classification.
 
@@ -335,7 +340,7 @@ We can see tah erros of prediction are not the same of the random forets model.
 
 &nbsp;
 
-##5.3 Ensemble model :  gbm + rf
+###7.3 Ensemble model :  gbm + rf
 
 At a final step, I use an esemble model combinig predictions of the random forest and the generalized boostring models, using a tree bag approach. Predictions of ensemble model are often better than predictions of a single model.
 
@@ -363,7 +368,7 @@ plot(CM_comb$table, color=c("#FF7F00", "#00008B", "#0000EE", "#4876FF", "#00BFFF
 
 
 
-##6. Prediction of the 20 test cases
+##8. Prediction of the 20 test cases
 
 Since the random forest has the same accuracy of the ensemble model, I'm going to use the random forest model to predict the 20 test cases
 
