@@ -1,14 +1,14 @@
 ---
 title: "Machine Learning Project"
 author: "Claire Della Vedova"
-date: "10 août 2018"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE, warnings=FALSE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 ```
 
 
@@ -19,11 +19,11 @@ Data used in this project come from accelerometers on the belt, forearm, arm, an
 
 Six participants were asked to perform barbell lifts correctly and incorrectly in 5 different ways : 
 
-A - exactly according to the specification
-B - throwing the elbows to the front
-C - lifting the dumbbell only halfway
-D - lowering the dumbbell only halfway
-E - throwing the hips to the front
++ A - exactly according to the specification
++ B - throwing the elbows to the front
++ C - lifting the dumbbell only halfway
++ D - lowering the dumbbell only halfway
++ E - throwing the hips to the front
 
 
 
@@ -38,7 +38,7 @@ Using the data of these 6 participants **the aim of this Machine Learning projec
 
 *NB : More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).*
 
-## Data
+##1. Data
 
 The training data for this project are available here:
 
@@ -51,12 +51,11 @@ https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
 The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. 
 
 
-```{r}
+```{r, cache=TRUE}
 training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
 
 testing <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
 
-training[1:10,1:10]
 ```
 
 
@@ -68,6 +67,7 @@ training[1:10,1:10]
 library(tidyverse)
 library(caret)
 library(funModeling)
+library(AppliedPredictiveModeling)
 
 ```
 
@@ -78,7 +78,7 @@ library(funModeling)
 dim(training)
 ```
 
-Training data contains 159 possible explanatory variables, and 196622 observations ! It will be impossible (beacause of time computation) to use all the available data to train the model.So latter in the project we'are going to use a little part of these data.
+Training data contains 159 possible explanatory variables, and 19622 observations ! It will be impossible (beacause of time computation) to use all the available data to train the model.So latter in the project we'are going to use a little part of these data.
 
 ###1.2 Structure
 ```{r}
@@ -87,6 +87,11 @@ str(training)
 
 Some variables seem to be factor by error and contains #DIV/0!". I'm going to remove these factor variables.
 
+###1.3 Distribution of classe modalities
+
+```{r}
+freq(data=training, input=c("classe"))
+```
 
 
 ##3. Explanatory variables selection
@@ -176,6 +181,7 @@ Descr_Var2 <- Descr_Var2 %>%
 
 ####3.4.3 num_window variable
 
+
 As the same for the "num_window" variable.
 ```{r}
 Descr_Var2 <- Descr_Var2 %>%
@@ -213,6 +219,9 @@ ncol(Descr_Var3)
 
 At the end of this step of variable selection, 34 are still usable to train a model to predict the manner in which new 20 participants did the exercice.
 
+
+
+
 ##4. Split training into training and valid sets
 
 ###4.1 Applying variable selection on training
@@ -236,20 +245,42 @@ training2 <- training %>%
 
 ###4.2 Split training into train_dat and valid_data sets
 
+Since the training data set contains too much lines to train the model (because of calculus time), we need to select a little part of them. I choose to use 25% of the 19622 observations, i.e 4907 observations. And, also I limit the explanatory variable to those previously selected.
+
 ```{r}
 p_init <- 0.25
 
 set.seed(1234)
-indTmp <- createDataPartition(y=training$classe, p=p_init, list=FALSE)
+indTmp <- createDataPartition(y=training2$classe, p=p_init, list=FALSE)
 tmp_data <- training2[indTmp,]
+```
 
+```{r}
+dim(tmp_data)
+```
+
+Then, I split this part of training data into train and valid datasets. The train part will be used to train machine learning models, and the valid dataset will be used to assess their performance. 
+
+
+```{r}
 set.seed(1234)
 indTrain <- createDataPartition(y=tmp_data$classe, p=0.75, list=FALSE)
 train_data <- tmp_data[indTrain,]
 valid_data <- tmp_data[-indTrain,]
 ```
 
+The train data contains 75% of the kept rows, i.e 3682 rows. The valid dataset contains 1225 rows.
+```{r}
+dim(train_data)
+dim(valid_data)
+```
+
+
+
 ##5. Train Models
+
+Since random forests are known to have good performance in classification machine learning 
+problems, I chose to use this kind of model.
 
 ###5.1 Random Forest
 
@@ -260,17 +291,52 @@ CM_rf <- confusionMatrix(valid_data$classe, pred_rf)
 CM_rf
 ```
 
+```{r}
+eose_rf <- round(CM_rf$overall[1],3)
+```
+
+**The expected out of sample error is `r eose_rf`.**
+
+&nbsp;
+
+```{r}
+plot(CM_rf$table, color=c("#FF7F00", "#00008B", "#0000EE", "#4876FF", "#00BFFF"), main="Random Forest")
+
+```
+
+
 ###5.2 Boosting with tree
 
+As a second kind a model, I chose to use a Generalized Boosted Model because it's also known as having good performance in classification.
+
 ```{r,cache=TRUE}
-mod_gbm <- train(classe~., data=train_data, method="gbm")
+mod_gbm <- train(classe~., data=train_data, method="gbm", verbose = FALSE)
 pred_gbm <- predict(mod_gbm, valid_data)
 CM_gbm <- confusionMatrix(valid_data$classe, pred_gbm)
 CM_gbm 
 ```
 
+```{r}
+eose_gbm <- round(CM_gbm$overall[1],3)
 
-##5.4 gbm + rf
+```
+
+**The expected out of sample error is `r eose_gbm`.**
+
+&nbsp;
+
+```{r}
+plot(CM_gbm$table, color=c("#FF7F00", "#00008B", "#0000EE", "#4876FF", "#00BFFF"), main="Generalized Boosted Model")
+
+```
+
+We can see tah erros of prediction are not the same of the random forets model.
+
+&nbsp;
+
+##5.3 Ensemble model :  gbm + rf
+
+At a final step, I use an esemble model combinig predictions of the random forest and the generalized boostring models, using a tree bag approach. Predictions of ensemble model are often better than predictions of a single model.
 
 ```{r,cache=TRUE}
 predDF <- data.frame(pred_rf, pred_gbm, classe=valid_data$classe)
@@ -281,4 +347,29 @@ CM_comb
 ```
 
 
+
+```{r}
+eose_comb <- round(CM_comb$overall[1],3)
+
+```
+
+**The expected out of sample error is `r eose_comb`**. The accuracy of the ensemble model is the same as the one of the random forest model.
+
+
+```{r}
+plot(CM_comb$table, color=c("#FF7F00", "#00008B", "#0000EE", "#4876FF", "#00BFFF"), main="Generalized Boosted Model")
+```
+
+
+
+##6. Prediction of the 20 test cases
+
+Since the random forest has the same accuracy of the ensemble model, I'm going to use the random forest model to predict the 20 test cases
+
+
+```{r}
+
+predict(mod_rf, testing)
+
+```
 
